@@ -53,15 +53,17 @@ namespace Dream_Stream_StorageApi.Controllers
 
             var lengthInBytes = new byte[10];
             BitConverter.GetBytes(length).CopyTo(lengthInBytes, 0);
-            var buffer = new byte[1024 * 1000];
+            var buffer = new byte[length];
             await Request.Body.ReadAsync(buffer);
+
+            if (buffer[^1] != 67) return StatusCode(500);
 
             await MessageLock.WaitAsync();
             stream.Seek(0, SeekOrigin.End);
             var offset = stream.Position;
 
             await stream.WriteAsync(lengthInBytes);
-            await stream.WriteAsync(buffer.Take(length).ToArray());
+            await stream.WriteAsync(buffer.ToArray());
             MessageLock.Release();
 
             return Ok(offset);

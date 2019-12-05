@@ -57,6 +57,7 @@ namespace Dream_Stream_StorageApi.Controllers
         }
 
         [HttpPost]
+        [DisableRequestSizeLimit]
         public async Task<IActionResult> Store([FromQuery]string topic, int partition, int length, int recursiveCount = 0)
         {
             var filePath = $"{BasePath}/{topic}/{partition}.txt";

@@ -28,6 +28,11 @@ namespace Dream_Stream_StorageApi.Controllers
             LabelNames = new[] { "TopicPartition" }
         });
 
+        private static readonly Counter CorruptedMessagesSizeInBytes = Metrics.CreateCounter("corrupted_messages_size_in_bytes", "", new CounterConfiguration
+        {
+            LabelNames = new[] { "TopicPartition" }
+        });
+
         public MessageController(ILogger<MessageController> logger)
         {
             _logger = logger;
@@ -66,7 +71,11 @@ namespace Dream_Stream_StorageApi.Controllers
             var buffer = new byte[length];
             await Request.Body.ReadAsync(buffer);
 
-            if (buffer[^1] != 67) return StatusCode(500);
+            if (buffer[^1] != 67)
+            {
+                CorruptedMessagesSizeInBytes.Inc(length);
+                return StatusCode(500);
+            }
 
             await MessageLock.WaitAsync();
             var offset = -1L;

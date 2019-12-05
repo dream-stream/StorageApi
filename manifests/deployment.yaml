@@ -4,6 +4,7 @@ metadata:
   name: storage-api
   labels:
     app: storage-api
+    k8s-app: prometheus
 spec:
   replicas: 1
   selector:
@@ -13,10 +14,11 @@ spec:
     metadata:
       labels:
         app: storage-api
+        k8s-app: prometheus
     spec:
       containers:
       - name: storage-api
-        image: dreamstream/storageapi:V2
+        image: dreamstream/storageapi:V4
         imagePullPolicy: Always
         ports:
         - containerPort: 80

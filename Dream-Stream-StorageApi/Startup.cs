@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Prometheus;
 
 namespace Dream_Stream_StorageApi
 {
@@ -33,6 +34,7 @@ namespace Dream_Stream_StorageApi
                 app.UseDeveloperExceptionPage();
             }
 
+            app.UseMetricServer();
             //app.UseSwagger();
 
             //app.UseSwaggerUI(c =>

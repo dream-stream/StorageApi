@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MessagePack;
@@ -28,11 +27,6 @@ namespace Dream_Stream_StorageApi.Controllers
             LabelNames = new[] { "TopicPartition" }
         });
 
-        private static readonly Counter CorruptedMessagesSizeInBytes = Metrics.CreateCounter("corrupted_messages_size_in_bytes", "", new CounterConfiguration
-        {
-            LabelNames = new[] { "TopicPartition" }
-        });
-
         public MessageController(ILogger<MessageController> logger)
         {
             _logger = logger;
@@ -48,12 +42,10 @@ namespace Dream_Stream_StorageApi.Controllers
             if (!stream.CanRead || !stream.CanSeek) throw new Exception("AArgghh Stream");
             if (!await StoreOffset(consumerGroup, topic, partition, offset)) throw new Exception("AArgghh Offset");
             
-            var buffer = new byte[amount];
             stream.Seek(offset, SeekOrigin.Begin);
-            await stream.ReadAsync(buffer);
+            await stream.CopyToAsync(Response.Body, amount);
 
             MessagesReadSizeInBytes.WithLabels($"{topic}/{partition}").Inc(amount);
-            await Response.Body.WriteAsync(buffer);
         }
 
         [HttpPost]
@@ -69,14 +61,6 @@ namespace Dream_Stream_StorageApi.Controllers
 
             var lengthInBytes = new byte[10];
             BitConverter.GetBytes(length).CopyTo(lengthInBytes, 0);
-            var buffer = new byte[length];
-            await Request.Body.ReadAsync(buffer);
-
-            if (buffer[^1] != 67)
-            {
-                CorruptedMessagesSizeInBytes.Inc(length);
-                return StatusCode(500);
-            }
 
             await MessageLock.WaitAsync();
             var offset = -1L;
@@ -86,7 +70,7 @@ namespace Dream_Stream_StorageApi.Controllers
                 offset = stream.Position;
 
                 await stream.WriteAsync(lengthInBytes);
-                await stream.WriteAsync(buffer.ToArray());
+                await Request.Body.CopyToAsync(stream);
                 MessageLock.Release();
             }
             catch (Exception e)

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Dream_Stream_StorageApi.ExtensionMethods;
 using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -41,10 +42,14 @@ namespace Dream_Stream_StorageApi.Controllers
 
             if (!stream.CanRead || !stream.CanSeek) throw new Exception("AArgghh Stream");
             if (!await StoreOffset(consumerGroup, topic, partition, offset)) throw new Exception("AArgghh Offset");
+
+            var size = Math.Min(amount, stream.Length - offset);
+
+            Response.Headers.Add("Content-Length", size.ToString());
             
             stream.Seek(offset, SeekOrigin.Begin);
-            await stream.CopyToAsync(Response.Body, amount);
-
+            await stream.MyCopyToAsync(Response.Body, amount);
+            
             MessagesReadSizeInBytes.WithLabels($"{topic}/{partition}").Inc(amount);
         }
 

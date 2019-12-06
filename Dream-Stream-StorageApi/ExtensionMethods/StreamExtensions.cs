@@ -6,7 +6,7 @@ namespace Dream_Stream_StorageApi.ExtensionMethods
 {
     public static class StreamExtensions
     {
-        public static async Task CopyToAsync(this Stream sourceStream, Stream destinationStream, int amount)
+        public static async Task MyCopyToAsync(this Stream sourceStream, Stream destinationStream, int amount)
         {
             var buffer = new byte[81920];
             int read;

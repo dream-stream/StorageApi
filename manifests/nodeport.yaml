@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: storage-api-external
+  labels:
+    app: storage-api
+    k8s-app: prometheus
+spec:
+  ports:
+  - port: 80
+    name: web
+    nodePort: 30050  
+  selector:
+    app: storage-api
+  type: NodePort

@@ -28,11 +28,6 @@ namespace Dream_Stream_StorageApi.Controllers
             LabelNames = new[] { "TopicPartition" }
         });
 
-        //private static readonly Counter CorruptedMessagesSizeInBytes = Metrics.CreateCounter("storageapi_corrupted_messages_size_in_bytes", "", new CounterConfiguration
-        //{
-        //    LabelNames = new[] { "TopicPartition" }
-        //});
-
         public MessageController(ILogger<MessageController> logger)
         {
             _logger = logger;
@@ -48,12 +43,12 @@ namespace Dream_Stream_StorageApi.Controllers
             if (!stream.CanRead || !stream.CanSeek) throw new Exception("AArgghh Stream");
             if (!await StoreOffset(consumerGroup, topic, partition, offset)) throw new Exception("AArgghh Offset");
 
-            var size = Math.Min(amount, stream.Length - offset);
+            var size = (int)Math.Min(amount, stream.Length - offset);
 
             Response.Headers.Add("Content-Length", size.ToString());
             
             stream.Seek(offset, SeekOrigin.Begin);
-            await stream.MyCopyToAsync(Response.Body, amount);
+            await stream.MyCopyToAsync(Response.Body, size);
             
             MessagesReadSizeInBytes.WithLabels($"{topic}/{partition}").Inc(size);
         }
@@ -76,19 +71,6 @@ namespace Dream_Stream_StorageApi.Controllers
             var offset = -1L;
             try
             {
-                //Validate data - Can't seek on HttpRequestStream
-                //var validationBuffer = new byte[2];
-                //Request.Body.Seek(0, SeekOrigin.Begin);
-                //await Request.Body.ReadAsync(validationBuffer, 0, 1);
-                //Request.Body.Seek(-1, SeekOrigin.End);
-                //await Request.Body.ReadAsync(validationBuffer, 1, 1);
-                //if (validationBuffer[0] != 201 || validationBuffer[1] != 67)
-                //{
-                //    CorruptedMessagesSizeInBytes.WithLabels($"{topic}/{partition}").Inc(length);
-                //    return StatusCode(500);
-                //}
-                //Request.Body.Seek(0, SeekOrigin.Begin);
-
                 stream.Seek(0, SeekOrigin.End);
                 offset = stream.Position;
 
@@ -102,8 +84,7 @@ namespace Dream_Stream_StorageApi.Controllers
                 if(offset != -1L)
                     stream.SetLength(offset);
                 MessageLock.Release();
-                if (recursiveCount > 2) return StatusCode(500);
-                await Store(topic, partition, length, ++recursiveCount);
+                return StatusCode(500);
             }
 
             MessagesWrittenSizeInBytes.WithLabels($"{topic}/{partition}").Inc(length);

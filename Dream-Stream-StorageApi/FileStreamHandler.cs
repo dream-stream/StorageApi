@@ -8,6 +8,7 @@ namespace Dream_Stream_StorageApi
     public static class FileStreamHandler
     {
         private static readonly ConcurrentDictionary<string, (Timer timer, FileStream fileStream)> FileStreams = new ConcurrentDictionary<string, (Timer timer, FileStream fileStream)>();
+        private static readonly SemaphoreSlim Lock = new SemaphoreSlim(1, 1);
 
         public static FileStream GetFileStream(string key, string filePath)
         {
@@ -30,11 +31,16 @@ namespace Dream_Stream_StorageApi
 
         private static void CreateFile(string path)
         {
+            Lock.Wait();
+            if (File.Exists(path)) return;
+
             var directories = path.Substring(0, path.LastIndexOf("/", StringComparison.Ordinal));
             Directory.CreateDirectory(directories);
             var stream = File.Create(path);
             stream.Close();
             stream.Dispose();
+            
+            Lock.Release();
         }
     }
 }

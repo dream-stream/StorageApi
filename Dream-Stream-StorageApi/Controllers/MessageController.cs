@@ -36,6 +36,7 @@ namespace Dream_Stream_StorageApi.Controllers
         [HttpGet]
         public async Task Read([FromQuery]string consumerGroup, string topic, int partition, long offset, int amount)
         {
+            if (partition != 0) return;
             var filePath = $"{BasePath}/{topic}/{partition}.txt";
             var streamKey = $"{consumerGroup}/{topic}/{partition}";
             var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
@@ -49,7 +50,8 @@ namespace Dream_Stream_StorageApi.Controllers
             
             stream.Seek(offset, SeekOrigin.Begin);
             await stream.MyCopyToAsync(Response.Body, size);
-            
+
+            Console.WriteLine($"size: {size}, stream length: {stream.Length}, offset: {offset}");
             MessagesReadSizeInBytes.WithLabels($"{topic}/{partition}").Inc(size);
         }
 

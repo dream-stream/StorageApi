@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: storage-api
-        image: dreamstream/storageapi:V12
+        image: dreamstream/storageapi:V15
         imagePullPolicy: Always
         ports:
         - containerPort: 80

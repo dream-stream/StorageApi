@@ -4,7 +4,6 @@ metadata:
   name: storage-api-external
   labels:
     app: storage-api
-    k8s-app: prometheus
 spec:
   ports:
   - port: 80

@@ -39,7 +39,7 @@ namespace Dream_Stream_StorageApi.Controllers
             var filePath = $"{BasePath}/{topic}/{partition}.txt";
             var streamKey = $"{consumerGroup}/{topic}/{partition}";
             var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
-
+            
             if (!stream.CanRead || !stream.CanSeek) throw new Exception("AArgghh Stream");
             if (!await StoreOffset(consumerGroup, topic, partition, offset)) throw new Exception("AArgghh Offset");
 
@@ -77,6 +77,12 @@ namespace Dream_Stream_StorageApi.Controllers
 
                 await stream.WriteAsync(lengthInBytes);
                 await Request.Body.CopyToAsync(stream);
+                await stream.FlushAsync();
+                if (stream.Position != offset + length + 10)
+                {
+                    stream.SetLength(offset);
+                    return StatusCode(400);
+                }
                 MessageLock.Release();
             }
             catch (Exception e)
@@ -95,7 +101,7 @@ namespace Dream_Stream_StorageApi.Controllers
         [HttpGet("offset")]
         public async Task<IActionResult> ReadOffset([FromQuery]string consumerGroup, string topic, int partition)
         {
-            var filePath = $"{BasePath}/offsets/{topic}/{partition}.txt";
+            var filePath = $"{BasePath}/offsets/{consumerGroup}/{topic}/{partition}.txt";
             var streamKey = $"offset/{consumerGroup}/{topic}/{partition}";
             var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
 
@@ -105,12 +111,14 @@ namespace Dream_Stream_StorageApi.Controllers
             stream.Seek(0, SeekOrigin.Begin);
             await stream.ReadAsync(buffer);
 
-            return Ok(LZ4MessagePackSerializer.Deserialize<long>(buffer));
+            var offset = LZ4MessagePackSerializer.Deserialize<long>(buffer);
+
+            return Ok(offset);
         }
 
         private async Task<bool> StoreOffset(string consumerGroup, string topic, int partition, long offset, int recursiveCount = 0)
         {
-            var filePath = $"{BasePath}/offsets/{topic}/{partition}.txt";
+            var filePath = $"{BasePath}/offsets/{consumerGroup}/{topic}/{partition}.txt";
             var streamKey = $"offset/{consumerGroup}/{topic}/{partition}";
             var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
 

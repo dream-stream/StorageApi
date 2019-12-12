@@ -16,7 +16,6 @@ namespace Dream_Stream_StorageApi.Controllers
     {
         private readonly ILogger<MessageController> _logger;
         private const string BasePath = "/mnt/data";
-        private static readonly SemaphoreSlim MessageLock = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim OffsetLock = new SemaphoreSlim(1, 1);
         private static readonly Counter MessagesWrittenSizeInBytes = Metrics.CreateCounter("messages_written_size_in_bytes", "", new CounterConfiguration
         {
@@ -38,7 +37,7 @@ namespace Dream_Stream_StorageApi.Controllers
         {
             var filePath = $"{BasePath}/{topic}/{partition}.txt";
             var streamKey = $"{consumerGroup}/{topic}/{partition}";
-            var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
+            var (_lock, stream) = FileStreamHandler.GetFileStream(streamKey, filePath);
             
             if (!stream.CanRead || !stream.CanSeek) throw new Exception("AArgghh Stream");
             if (!await StoreOffset(consumerGroup, topic, partition, offset)) throw new Exception("AArgghh Offset");
@@ -61,15 +60,15 @@ namespace Dream_Stream_StorageApi.Controllers
             var filePath = $"{BasePath}/{topic}/{partition}.txt";
             var streamKey = $"{topic}/{partition}";
 
-            var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
+            var (_lock, stream) = FileStreamHandler.GetFileStream(streamKey, filePath);
 
             if (!stream.CanSeek || !stream.CanWrite) return StatusCode(500);
 
             var lengthInBytes = new byte[10];
             BitConverter.GetBytes(length).CopyTo(lengthInBytes, 0);
 
-            await MessageLock.WaitAsync();
             var offset = -1L;
+            await _lock.WaitAsync();
             try
             {
                 stream.Seek(0, SeekOrigin.End);
@@ -78,19 +77,14 @@ namespace Dream_Stream_StorageApi.Controllers
                 await stream.WriteAsync(lengthInBytes);
                 await Request.Body.CopyToAsync(stream);
                 await stream.FlushAsync();
-                if (stream.Position != offset + length + 10)
-                {
-                    stream.SetLength(offset);
-                    return StatusCode(400);
-                }
-                MessageLock.Release();
+                _lock.Release();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
                 if(offset != -1L)
                     stream.SetLength(offset);
-                MessageLock.Release();
+                _lock.Release();
                 return StatusCode(500);
             }
 
@@ -103,7 +97,7 @@ namespace Dream_Stream_StorageApi.Controllers
         {
             var filePath = $"{BasePath}/offsets/{consumerGroup}/{topic}/{partition}.txt";
             var streamKey = $"offset/{consumerGroup}/{topic}/{partition}";
-            var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
+            var (_lock, stream) = FileStreamHandler.GetFileStream(streamKey, filePath);
 
             if (!stream.CanSeek || !stream.CanRead) return StatusCode(500);
 
@@ -120,7 +114,7 @@ namespace Dream_Stream_StorageApi.Controllers
         {
             var filePath = $"{BasePath}/offsets/{consumerGroup}/{topic}/{partition}.txt";
             var streamKey = $"offset/{consumerGroup}/{topic}/{partition}";
-            var stream = FileStreamHandler.GetFileStream(streamKey, filePath);
+            var (_lock, stream) = FileStreamHandler.GetFileStream(streamKey, filePath);
 
             if (!stream.CanWrite || !stream.CanRead) return false;
 

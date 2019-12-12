@@ -8,14 +8,14 @@ namespace Dream_Stream_StorageApi
     public static class FileStreamHandler
     {
         //private static readonly ConcurrentDictionary<string, (Timer timer, FileStream fileStream)> FileStreams = new ConcurrentDictionary<string, (Timer timer, FileStream fileStream)>();
-        private static readonly ConcurrentDictionary<string, FileStream> FileStreams = new ConcurrentDictionary<string, FileStream>();
+        private static readonly ConcurrentDictionary<string, (SemaphoreSlim _lock, FileStream stream)> FileStreams = new ConcurrentDictionary<string, (SemaphoreSlim, FileStream)>();
         private static readonly SemaphoreSlim Lock = new SemaphoreSlim(1, 1);
 
-        public static FileStream GetFileStream(string key, string filePath)
+        public static (SemaphoreSlim _lock, FileStream stream) GetFileStream(string key, string filePath)
         {
             if(!File.Exists(filePath)) CreateFile(filePath);
 
-            var fileStream = FileStreams.GetOrAdd(key,
+            var fileStreamWithLock = FileStreams.GetOrAdd(key,
                 //(new Timer(x =>
                 //    {
                 //        if (!FileStreams.TryRemove(key, out var tuple)) return;
@@ -23,11 +23,11 @@ namespace Dream_Stream_StorageApi
                 //        tuple.fileStream.Dispose();
                 //        tuple.timer.Dispose();
                 //    }, null, 10000, 1000),
-                    new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite));
+                    (new SemaphoreSlim(1, 1), new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite)));
             
             //timer.Change(10000, 1000);
 
-            return fileStream;
+            return fileStreamWithLock;
         }
 
         private static void CreateFile(string path)

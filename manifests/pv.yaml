@@ -7,8 +7,8 @@ metadata:
 spec:
   storageClassName: storage-api-storage-class
   capacity:
-    storage: 10Gi
+    storage: 9Gi
   accessModes:
     - ReadWriteMany
   hostPath:
-    path: "/mnt/data"
+    path: "/ssd"

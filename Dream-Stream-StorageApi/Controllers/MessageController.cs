@@ -15,7 +15,7 @@ namespace Dream_Stream_StorageApi.Controllers
     public class MessageController : ControllerBase
     {
         private readonly ILogger<MessageController> _logger;
-        private const string BasePath = "/mnt/data";
+        private const string BasePath = "/ssd";
         private static readonly SemaphoreSlim OffsetLock = new SemaphoreSlim(1, 1);
         private static readonly Counter MessagesWrittenSizeInBytes = Metrics.CreateCounter("messages_written_size_in_bytes", "", new CounterConfiguration
         {

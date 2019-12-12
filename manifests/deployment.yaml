@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: storage-api
-        image: dreamstream/storageapi:V21
+        image: dreamstream/storageapi:V24
         imagePullPolicy: Always
         ports:
         - containerPort: 80
@@ -29,7 +29,7 @@ spec:
           value: "http://*:80"
         volumeMounts:
         - name: file-storage
-          mountPath: /mnt/data
+          mountPath: /ssd
       volumes:
         - name: file-storage
           persistentVolumeClaim:
@@ -53,4 +53,4 @@ spec:
       - ReadWriteMany
     resources:
       requests:
-        storage: 3Gi
+        storage: 9Gi

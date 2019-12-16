@@ -49,7 +49,6 @@ namespace Dream_Stream_StorageApi.Controllers
             stream.Seek(offset, SeekOrigin.Begin);
             await stream.MyCopyToAsync(Response.Body, size);
 
-            Console.WriteLine($"size: {size}, amount: {amount}, stream length: {stream.Length}, offset: {offset}");
             MessagesReadSizeInBytes.WithLabels($"{topic}/{partition}").Inc(size);
         }
 
@@ -76,6 +75,13 @@ namespace Dream_Stream_StorageApi.Controllers
 
                 await stream.WriteAsync(lengthInBytes);
                 await Request.Body.CopyToAsync(stream);
+
+                if (stream.Position - offset != length + 10)
+                {
+                    Console.WriteLine("Stuff got fucked up and we reset!!!");
+                    stream.SetLength(offset);
+                }
+
                 await stream.FlushAsync();
                 _lock.Release();
             }
